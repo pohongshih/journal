@@ -39,12 +39,12 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans text-slate-900 selection:bg-blue-200">
+    <div className="min-h-screen flex flex-col bg-slate-50 font-sans text-slate-900 selection:bg-blue-200">
       {/* Global Loading state */}
       <LoadingOverlay isLoading={isLoading} />
 
       {/* Navbar */}
-      <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-slate-200 shadow-sm">
+      <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-slate-200 shadow-sm flex-shrink-0">
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="bg-blue-600 p-1.5 rounded-lg text-white">
@@ -71,7 +71,7 @@ export default function App() {
       </header>
 
       {/* Main Content Area */}
-      <main className="p-4 sm:p-6 lg:p-8">
+      <main className="p-4 sm:p-6 lg:p-8 flex-1">
         {!user && <Login onLogin={handleLogin} setLoading={setIsLoading} />}
         
         {user && activeRoleView === 'admin' && (
@@ -96,6 +96,11 @@ export default function App() {
           />
         )}
       </main>
+
+      {/* Footer */}
+      <footer className="py-6 text-center text-sm text-slate-500 border-t border-slate-200 mt-auto flex-shrink-0">
+        © 2026 施柏宏. All rights reserved.
+      </footer>
     </div>
   );
 }

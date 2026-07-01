@@ -39,8 +39,8 @@ export default function Login({ onLogin, setLoading }: LoginProps) {
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-blue-100 text-blue-600 mb-4">
             <BookOpen className="h-8 w-8" />
           </div>
-          <h2 className="text-2xl font-bold text-slate-800">歡迎使用</h2>
-          <p className="text-slate-500 mt-2">高中線上週記管理平台</p>
+          <h2 className="text-2xl font-bold text-slate-800">高中線上週記管理平台</h2>
+          <p className="text-slate-500 mt-2">士林高商資料處理科</p>
         </div>
         
         <div className="px-8 pb-10 pt-4">
@@ -86,13 +86,7 @@ export default function Login({ onLogin, setLoading }: LoginProps) {
               <LogIn className="h-5 w-5" />
               登入系統
             </button>
-            
-            <div className="mt-4 text-center text-xs text-slate-400">
-              測試帳號：<br/>
-              管理員: admin / admin<br/>
-              老師: teacher1 / password<br/>
-              學生: 11201 / password
-            </div>
+          
           </form>
         </div>
       </div>
