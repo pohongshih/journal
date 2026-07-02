@@ -24,6 +24,25 @@ export default function TeacherView({ user, setLoading, onNavigateToAdmin }: Tea
   // Publish state
   const [pubForm, setPubForm] = useState<Partial<Topic>>({ allowLate: true, minLength: 0 });
   const [isEditingTopic, setIsEditingTopic] = useState(false);
+  const [topicsPage, setTopicsPage] = useState(1);
+  const [topicToDelete, setTopicToDelete] = useState<Topic | null>(null);
+
+  const itemsPerPage = 8;
+  const totalPages = Math.ceil(topics.length / itemsPerPage);
+
+  // Sync topicsPage back to valid range when totalPages changes
+  useEffect(() => {
+    if (totalPages > 0 && topicsPage > totalPages) {
+      setTopicsPage(totalPages);
+    }
+  }, [topics.length, totalPages, topicsPage]);
+
+  // Auto-select first topic on load or update
+  useEffect(() => {
+    if (topics.length > 0 && (!selectedTopicId || !topics.some(t => t.topicId === selectedTopicId))) {
+      setSelectedTopicId(topics[0].topicId);
+    }
+  }, [topics]);
 
   // Student manage state
   const [editingStudent, setEditingStudent] = useState<Partial<Student> | null>(null);
@@ -37,7 +56,15 @@ export default function TeacherView({ user, setLoading, onNavigateToAdmin }: Tea
     try {
       const data = await callApi('getTeacherData', { classId: targetClass, userId: user.userId, role: user.role });
       setStudents(data.students || []);
-      setTopics(data.topics || []);
+      const sortedTopics = (data.topics || []).sort((a: Topic, b: Topic) => {
+        const dateA = new Date(a.publishDate).getTime();
+        const dateB = new Date(b.publishDate).getTime();
+        if (dateB !== dateA) {
+          return dateB - dateA;
+        }
+        return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+      });
+      setTopics(sortedTopics);
       setJournals(data.journals || []);
     } catch (e) {
       console.error(e);
@@ -52,6 +79,9 @@ export default function TeacherView({ user, setLoading, onNavigateToAdmin }: Tea
 
   // --- Stats Calculation ---
   const pendingFeedbackCount = journals.filter(j => !j.teacherComment).length;
+
+  const currentPage = Math.min(topicsPage, totalPages || 1);
+  const displayedTopics = topics.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   // --- Grading Logic ---
   const handleGradeSubmit = async () => {
@@ -449,7 +479,7 @@ export default function TeacherView({ user, setLoading, onNavigateToAdmin }: Tea
                 已發布列表
               </h3>
               <div className="space-y-4">
-                {topics.map(t => (
+                {displayedTopics.map(t => (
                   <div key={t.topicId} className="flex flex-col sm:flex-row gap-4 p-5 rounded-2xl border border-slate-200 hover:border-emerald-200 hover:shadow-sm bg-white transition-all group">
                     <div className="flex-1 cursor-pointer" onClick={() => handleTopicEdit(t)}>
                       <div className="flex items-center gap-3 mb-2">
@@ -464,7 +494,7 @@ export default function TeacherView({ user, setLoading, onNavigateToAdmin }: Tea
                     </div>
                     <div className="flex items-center gap-2 sm:flex-col sm:justify-center border-t sm:border-t-0 sm:border-l border-slate-100 pt-3 sm:pt-0 sm:pl-4 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
                       <button onClick={() => handleTopicEdit(t)} className="w-full px-4 py-2 text-sm bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-medium transition-colors">編輯</button>
-                      <button onClick={() => { if(window.confirm('確定刪除?')) callApi('deleteTopic', {topicId: t.topicId}).then(fetchData); }} className="w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-xl font-medium transition-colors">刪除</button>
+                      <button onClick={() => setTopicToDelete(t)} className="w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-xl font-medium transition-colors">刪除</button>
                     </div>
                   </div>
                 ))}
@@ -474,6 +504,46 @@ export default function TeacherView({ user, setLoading, onNavigateToAdmin }: Tea
                   </div>
                 )}
               </div>
+
+              {totalPages > 1 && (
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-slate-100 pt-6 mt-6">
+                  <span className="text-sm text-slate-500">
+                    顯示第 {((currentPage - 1) * itemsPerPage) + 1} 至 {Math.min(currentPage * itemsPerPage, topics.length)} 筆題目，共 {topics.length} 筆
+                  </span>
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      disabled={currentPage === 1}
+                      onClick={() => setTopicsPage(currentPage - 1)}
+                      className="px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 disabled:opacity-50 disabled:pointer-events-none text-sm font-medium transition-colors"
+                    >
+                      上一頁
+                    </button>
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(pageNum => (
+                      <button
+                        key={pageNum}
+                        type="button"
+                        onClick={() => setTopicsPage(pageNum)}
+                        className={`w-9 h-9 rounded-lg text-sm font-medium transition-colors ${
+                          currentPage === pageNum
+                            ? 'bg-emerald-600 text-white'
+                            : 'border border-slate-200 hover:bg-slate-50 text-slate-600'
+                        }`}
+                      >
+                        {pageNum}
+                      </button>
+                    ))}
+                    <button
+                      type="button"
+                      disabled={currentPage === totalPages}
+                      onClick={() => setTopicsPage(currentPage + 1)}
+                      className="px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 disabled:opacity-50 disabled:pointer-events-none text-sm font-medium transition-colors"
+                    >
+                      下一頁
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -652,6 +722,49 @@ export default function TeacherView({ user, setLoading, onNavigateToAdmin }: Tea
             <code className="font-mono text-xs bg-white px-2 py-1 rounded border border-blue-200 mt-2 inline-block font-bold text-slate-800">學號,姓名,座號,預設密碼</code>
           </div>
           <textarea rows={10} value={importText} onChange={e=>setImportText(e.target.value)} placeholder="11201,陳小明,01,1234&#10;11202,王美美,02,1234" className="w-full rounded-xl border border-slate-300 p-4 font-mono text-sm leading-relaxed focus:ring-4 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all" />
+        </div>
+      </Modal>
+
+      {/* Delete Topic Confirmation Modal */}
+      <Modal
+        isOpen={!!topicToDelete}
+        onClose={() => setTopicToDelete(null)}
+        title="確定要刪除此題目嗎？"
+        footer={
+          <>
+            <button
+              onClick={() => setTopicToDelete(null)}
+              className="px-5 py-2.5 text-slate-600 hover:bg-slate-100 rounded-xl font-medium transition-colors"
+            >
+              取消
+            </button>
+            <button
+              onClick={async () => {
+                if (!topicToDelete) return;
+                setLoading(true);
+                try {
+                  await callApi('deleteTopic', { topicId: topicToDelete.topicId });
+                  setTopicToDelete(null);
+                  await fetchData();
+                } catch (e) {
+                  console.error(e);
+                  alert('刪除失敗');
+                } finally {
+                  setLoading(false);
+                }
+              }}
+              className="px-6 py-2.5 bg-red-600 text-white hover:bg-red-700 rounded-xl shadow-sm font-medium transition-colors"
+            >
+              確定刪除
+            </button>
+          </>
+        }
+      >
+        <div className="py-2">
+          <p className="text-slate-600 leading-relaxed">
+            刪除後此題目的學生週記內容與評語將會一併被刪除，且無法還原。<br />
+            您確定要刪除「<span className="font-semibold text-slate-900">{topicToDelete?.title}</span>」嗎？
+          </p>
         </div>
       </Modal>
     </div>
