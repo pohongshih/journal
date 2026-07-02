@@ -25,12 +25,12 @@ export default function StudentView({ user, setLoading }: StudentViewProps) {
     try {
       const data = await callApi('getStudentData', { userId: user.userId });
       const sortedTopics = (data.topics || []).sort((a: Topic, b: Topic) => {
-        const dateA = new Date(a.publishDate).getTime();
-        const dateB = new Date(b.publishDate).getTime();
-        if (dateB !== dateA) {
-          return dateB - dateA;
+        if (b.publishDate !== a.publishDate) {
+          return b.publishDate.localeCompare(a.publishDate);
         }
-        return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+        const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return timeB - timeA;
       });
       setTopics(sortedTopics);
       setJournals(data.journals || []);
