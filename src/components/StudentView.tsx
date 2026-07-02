@@ -78,9 +78,12 @@ export default function StudentView({ user, setLoading }: StudentViewProps) {
       return;
     }
 
+    const existingJ = journals.find(j => j.topicId === activeTopic.topicId);
     const now = new Date();
     const due = new Date(activeTopic.dueDate);
     const isLate = now > due;
+
+    const finalStatus = existingJ ? existingJ.status : (isLate ? 'late' : 'submitted');
 
     setLoading(true);
     try {
@@ -88,7 +91,7 @@ export default function StudentView({ user, setLoading }: StudentViewProps) {
         topicId: activeTopic.topicId,
         studentId: user.userId,
         content: journalContent,
-        status: isLate ? 'late' : 'submitted'
+        status: finalStatus
       });
       await fetchStudentData();
       setActiveTopic(null);

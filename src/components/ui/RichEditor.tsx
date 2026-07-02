@@ -145,13 +145,34 @@ const COLORS = [
 ];
 
 const MenuBar = ({ editor }: { editor: any }) => {
-  const [showColorPicker, setShowColorPicker] = useState(false);
-  const colorPickerRef = useRef<HTMLDivElement>(null);
+  const [showTextColorPicker, setShowTextColorPicker] = useState(false);
+  const [showBgColorPicker, setShowBgColorPicker] = useState(false);
+  const [lastTextColor, setLastTextColor] = useState('#cc0000'); // 預設紅色
+  const [lastBgColor, setLastBgColor] = useState('#ffd966'); // 預設黃色
+  const textColorPickerRef = useRef<HTMLDivElement>(null);
+  const bgColorPickerRef = useRef<HTMLDivElement>(null);
+  const [, setSelectionTick] = useState(0);
+
+  useEffect(() => {
+    if (!editor) return;
+
+    const handleTransaction = () => {
+      setSelectionTick(prev => prev + 1);
+    };
+
+    editor.on('transaction', handleTransaction);
+    return () => {
+      editor.off('transaction', handleTransaction);
+    };
+  }, [editor]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (colorPickerRef.current && !colorPickerRef.current.contains(event.target as Node)) {
-        setShowColorPicker(false);
+      if (textColorPickerRef.current && !textColorPickerRef.current.contains(event.target as Node)) {
+        setShowTextColorPicker(false);
+      }
+      if (bgColorPickerRef.current && !bgColorPickerRef.current.contains(event.target as Node)) {
+        setShowBgColorPicker(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -164,24 +185,36 @@ const MenuBar = ({ editor }: { editor: any }) => {
   const currentTextColor = editor.getAttributes('textStyle').color || '#000000';
   const currentBgColor = editor.getAttributes('highlight').color || '#ffffff';
 
+  const handleApplyTextColor = () => {
+    editor.chain().focus().setColor(lastTextColor).run();
+  };
+
+  const handleApplyBgColor = () => {
+    if (lastBgColor === '#ffffff') {
+      editor.chain().focus().unsetHighlight().run();
+    } else {
+      editor.chain().focus().setHighlight({ color: lastBgColor }).run();
+    }
+  };
+
   return (
-    <div className="flex flex-wrap items-center gap-1 border-b border-slate-200 bg-slate-50 p-2 rounded-t-xl relative">
+    <div className="flex flex-wrap items-center gap-x-1 gap-y-1.5 border-b border-slate-200 bg-slate-50 p-2 rounded-t-xl select-none">
       <button
         type="button"
         onClick={() => {
           editor.chain().focus().unsetAllMarks().clearNodes().run();
         }}
-        className="p-2 rounded hover:bg-slate-200 transition-colors text-slate-600"
+        className="p-2 rounded hover:bg-slate-200 transition-colors text-slate-600 flex-shrink-0"
         title="清除格式"
       >
         <Eraser className="w-4 h-4" />
       </button>
       
-      <div className="w-px h-6 bg-slate-300 mx-1"></div>
+      <div className="hidden sm:block w-px h-6 bg-slate-300 mx-1 flex-shrink-0"></div>
 
-      <div className="relative group flex items-center">
+      <div className="relative flex items-center flex-shrink-0">
         <select
-          className="appearance-none bg-transparent hover:bg-slate-200 border-none rounded px-2 py-1.5 pr-6 text-sm text-slate-700 cursor-pointer outline-none focus:ring-0"
+          className="appearance-none bg-transparent hover:bg-slate-200 border-none rounded pl-2 pr-6 py-1.5 text-sm text-slate-700 cursor-pointer outline-none focus:ring-0"
           value={currentFontSize}
           onChange={(e) => editor.chain().focus().setFontSize(e.target.value).run()}
           title="文字大小"
@@ -193,12 +226,12 @@ const MenuBar = ({ editor }: { editor: any }) => {
         <ChevronDown className="w-3 h-3 absolute right-2 pointer-events-none text-slate-500" />
       </div>
 
-      <div className="w-px h-6 bg-slate-300 mx-1"></div>
+      <div className="hidden sm:block w-px h-6 bg-slate-300 mx-1 flex-shrink-0"></div>
 
       <button
         type="button"
         onClick={() => editor.chain().focus().toggleBold().run()}
-        className={`p-2 rounded hover:bg-slate-200 transition-colors ${editor.isActive('bold') ? 'bg-slate-200 text-slate-900' : 'text-slate-600'}`}
+        className={`p-2 rounded hover:bg-slate-200 transition-colors flex-shrink-0 ${editor.isActive('bold') ? 'bg-slate-200 text-slate-900' : 'text-slate-600'}`}
         title="粗體"
       >
         <Bold className="w-4 h-4" />
@@ -206,7 +239,7 @@ const MenuBar = ({ editor }: { editor: any }) => {
       <button
         type="button"
         onClick={() => editor.chain().focus().toggleItalic().run()}
-        className={`p-2 rounded hover:bg-slate-200 transition-colors ${editor.isActive('italic') ? 'bg-slate-200 text-slate-900' : 'text-slate-600'}`}
+        className={`p-2 rounded hover:bg-slate-200 transition-colors flex-shrink-0 ${editor.isActive('italic') ? 'bg-slate-200 text-slate-900' : 'text-slate-600'}`}
         title="斜體"
       >
         <Italic className="w-4 h-4" />
@@ -214,68 +247,74 @@ const MenuBar = ({ editor }: { editor: any }) => {
       <button
         type="button"
         onClick={() => editor.chain().focus().toggleUnderline().run()}
-        className={`p-2 rounded hover:bg-slate-200 transition-colors ${editor.isActive('underline') ? 'bg-slate-200 text-slate-900' : 'text-slate-600'}`}
+        className={`p-2 rounded hover:bg-slate-200 transition-colors flex-shrink-0 ${editor.isActive('underline') ? 'bg-slate-200 text-slate-900' : 'text-slate-600'}`}
         title="底線"
       >
         <UnderlineIcon className="w-4 h-4" />
       </button>
-      
-      <div className="relative" ref={colorPickerRef}>
-        <button
-          type="button"
-          onClick={() => setShowColorPicker(!showColorPicker)}
-          className="p-2 rounded hover:bg-slate-200 transition-colors text-slate-600 flex items-center gap-1"
-          title="文字與背景顏色"
-        >
-          <div className="flex flex-col items-center">
-            <span className="font-serif font-bold text-xs leading-none" style={{ color: currentTextColor }}>A</span>
-            <div className="w-3 h-1 mt-0.5" style={{ backgroundColor: currentTextColor }}></div>
-          </div>
-          <ChevronDown className="w-3 h-3 text-slate-400" />
-        </button>
 
-        {showColorPicker && (
-          <div className="absolute top-full left-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-xl p-4 z-50 flex gap-6 w-max max-w-[90vw]">
-            <div>
-              <div className="text-xs font-semibold text-slate-500 mb-2">背景顏色</div>
-              <div className="grid grid-cols-10 gap-1">
-                {COLORS.map(color => (
-                  <button
-                    key={`bg-${color}`}
-                    onClick={() => {
-                      if (color === '#ffffff') {
-                        editor.chain().focus().unsetHighlight().run();
-                      } else {
-                        editor.chain().focus().setHighlight({ color }).run();
-                      }
-                      setShowColorPicker(false);
-                    }}
-                    className={`w-4 h-4 rounded-sm border ${color === '#ffffff' ? 'border-slate-300' : 'border-transparent'} hover:scale-110 transition-transform relative`}
-                    style={{ backgroundColor: color }}
-                    title={color}
-                  >
-                    {currentBgColor === color && (
-                      <Check className={`w-3 h-3 absolute inset-0 m-auto ${['#ffffff', '#efefef', '#f3f3f3', '#f4cccc', '#fce5cd', '#fff2cc', '#d9ead3', '#d0e0e3', '#c9daf8', '#cfe2f3', '#d9d2e9', '#ead1dc'].includes(color) ? 'text-black' : 'text-white'}`} />
-                    )}
-                  </button>
-                ))}
+      <div className="hidden sm:block w-px h-6 bg-slate-300 mx-1 flex-shrink-0"></div>
+      
+      {/* 文字顏色 (A) */}
+      <div className="relative flex-shrink-0" ref={textColorPickerRef}>
+        <div className="flex items-center rounded bg-white border border-slate-300 shadow-sm overflow-hidden h-9">
+          <button
+            type="button"
+            onClick={handleApplyTextColor}
+            className="pl-2 pr-1.5 h-full hover:bg-slate-100 transition-colors flex flex-col items-center justify-center"
+            title={`套用最近字型顏色: ${lastTextColor}`}
+          >
+            <span className="font-serif font-bold text-sm leading-none text-slate-700">A</span>
+            <div className="w-4 h-1 mt-0.5 rounded-sm" style={{ backgroundColor: lastTextColor }}></div>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setShowTextColorPicker(!showTextColorPicker);
+              setShowBgColorPicker(false);
+            }}
+            className="px-1 h-full hover:bg-slate-100 border-l border-slate-200 transition-colors flex items-center justify-center"
+            title="選擇文字顏色"
+          >
+            <ChevronDown className="w-3 h-3 text-slate-400" />
+          </button>
+        </div>
+
+        {showTextColorPicker && (
+          <>
+            {/* 手機版 Modal 遮罩 (只在 md 以下顯示) */}
+            <div 
+              className="fixed inset-0 bg-slate-900/40 z-[99] md:hidden animate-in fade-in duration-150"
+              onClick={() => setShowTextColorPicker(false)}
+            />
+            
+            {/* 顏色選擇面板：手機上置中 Modal，電腦上靠右 Popover */}
+            <div className="fixed inset-0 m-auto h-fit w-[235px] bg-white rounded-2xl shadow-2xl p-4 z-[100] border border-slate-200 animate-in fade-in zoom-in-95 duration-150 md:absolute md:inset-auto md:top-full md:right-0 md:left-auto md:mt-1 md:w-[210px] md:p-3 md:rounded-lg md:shadow-xl md:z-50">
+              <div className="flex justify-between items-center mb-2">
+                <div className="text-xs font-semibold text-slate-500">文字顏色</div>
+                <button 
+                  type="button"
+                  onClick={() => setShowTextColorPicker(false)}
+                  className="text-slate-400 hover:text-slate-600 text-sm md:hidden font-mono px-1"
+                >
+                  ✕
+                </button>
               </div>
-            </div>
-            <div>
-              <div className="text-xs font-semibold text-slate-500 mb-2">文字顏色</div>
               <div className="grid grid-cols-10 gap-1">
                 {COLORS.map(color => (
                   <button
                     key={`text-${color}`}
+                    type="button"
                     onClick={() => {
                       if (color === '#000000') {
                         editor.chain().focus().unsetColor().run();
                       } else {
                         editor.chain().focus().setColor(color).run();
+                        setLastTextColor(color);
                       }
-                      setShowColorPicker(false);
+                      setShowTextColorPicker(false);
                     }}
-                    className={`w-4 h-4 rounded-sm border ${color === '#ffffff' ? 'border-slate-300' : 'border-transparent'} hover:scale-110 transition-transform relative`}
+                    className={`w-[18px] h-[18px] md:w-4 md:h-4 rounded-sm border ${color === '#ffffff' ? 'border-slate-300' : 'border-transparent'} hover:scale-110 transition-transform relative`}
                     style={{ backgroundColor: color }}
                     title={color}
                   >
@@ -286,16 +325,90 @@ const MenuBar = ({ editor }: { editor: any }) => {
                 ))}
               </div>
             </div>
-          </div>
+          </>
         )}
       </div>
 
-      <div className="w-px h-6 bg-slate-300 mx-1"></div>
+      {/* 背景顏色 (螢光筆) */}
+      <div className="relative flex-shrink-0" ref={bgColorPickerRef}>
+        <div className="flex items-center rounded bg-white border border-slate-300 shadow-sm overflow-hidden h-9">
+          <button
+            type="button"
+            onClick={handleApplyBgColor}
+            className="pl-2 pr-1.5 h-full hover:bg-slate-100 transition-colors flex flex-col items-center justify-center"
+            title={`套用最近背景顏色: ${lastBgColor}`}
+          >
+            <Palette className="w-4 h-4 text-slate-600" />
+            <div className="w-4 h-1 mt-0.5 rounded-sm" style={{ backgroundColor: lastBgColor === '#ffffff' ? 'transparent' : lastBgColor }}></div>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setShowBgColorPicker(!showBgColorPicker);
+              setShowTextColorPicker(false);
+            }}
+            className="px-1 h-full hover:bg-slate-100 border-l border-slate-200 transition-colors flex items-center justify-center"
+            title="選擇背景顏色"
+          >
+            <ChevronDown className="w-3 h-3 text-slate-400" />
+          </button>
+        </div>
+
+        {showBgColorPicker && (
+          <>
+            {/* 手機版 Modal 遮罩 (只在 md 以下顯示) */}
+            <div 
+              className="fixed inset-0 bg-slate-900/40 z-[99] md:hidden animate-in fade-in duration-150"
+              onClick={() => setShowBgColorPicker(false)}
+            />
+            
+            {/* 顏色選擇面板：手機上置中 Modal，電腦上靠右 Popover */}
+            <div className="fixed inset-0 m-auto h-fit w-[235px] bg-white rounded-2xl shadow-2xl p-4 z-[100] border border-slate-200 animate-in fade-in zoom-in-95 duration-150 md:absolute md:inset-auto md:top-full md:right-0 md:left-auto md:mt-1 md:w-[210px] md:p-3 md:rounded-lg md:shadow-xl md:z-50">
+              <div className="flex justify-between items-center mb-2">
+                <div className="text-xs font-semibold text-slate-500">背景顏色</div>
+                <button 
+                  type="button"
+                  onClick={() => setShowBgColorPicker(false)}
+                  className="text-slate-400 hover:text-slate-600 text-sm md:hidden font-mono px-1"
+                >
+                  ✕
+                </button>
+              </div>
+              <div className="grid grid-cols-10 gap-1">
+                {COLORS.map(color => (
+                  <button
+                    key={`bg-${color}`}
+                    type="button"
+                    onClick={() => {
+                      if (color === '#ffffff') {
+                        editor.chain().focus().unsetHighlight().run();
+                      } else {
+                        editor.chain().focus().setHighlight({ color }).run();
+                        setLastBgColor(color);
+                      }
+                      setShowBgColorPicker(false);
+                    }}
+                    className={`w-[18px] h-[18px] md:w-4 md:h-4 rounded-sm border ${color === '#ffffff' ? 'border-slate-300' : 'border-transparent'} hover:scale-110 transition-transform relative`}
+                    style={{ backgroundColor: color }}
+                    title={color}
+                  >
+                    {currentBgColor === color && (
+                      <Check className={`w-3 h-3 absolute inset-0 m-auto ${['#ffffff', '#efefef', '#f3f3f3', '#f4cccc', '#fce5cd', '#fff2cc', '#d9ead3', '#d0e0e3', '#c9daf8', '#cfe2f3', '#d9d2e9', '#ead1dc'].includes(color) ? 'text-black' : 'text-white'}`} />
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+
+      <div className="hidden sm:block w-px h-6 bg-slate-300 mx-1 flex-shrink-0"></div>
       
       <button
         type="button"
         onClick={() => editor.chain().focus().toggleBulletList().run()}
-        className={`p-2 rounded hover:bg-slate-200 transition-colors ${editor.isActive('bulletList') ? 'bg-slate-200 text-slate-900' : 'text-slate-600'}`}
+        className={`p-2 rounded hover:bg-slate-200 transition-colors flex-shrink-0 ${editor.isActive('bulletList') ? 'bg-slate-200 text-slate-900' : 'text-slate-600'}`}
         title="項目符號"
       >
         <List className="w-4 h-4" />
@@ -303,18 +416,18 @@ const MenuBar = ({ editor }: { editor: any }) => {
       <button
         type="button"
         onClick={() => editor.chain().focus().toggleOrderedList().run()}
-        className={`p-2 rounded hover:bg-slate-200 transition-colors ${editor.isActive('orderedList') ? 'bg-slate-200 text-slate-900' : 'text-slate-600'}`}
+        className={`p-2 rounded hover:bg-slate-200 transition-colors flex-shrink-0 ${editor.isActive('orderedList') ? 'bg-slate-200 text-slate-900' : 'text-slate-600'}`}
         title="編號列表"
       >
         <ListOrdered className="w-4 h-4" />
       </button>
 
-      <div className="w-px h-6 bg-slate-300 mx-1"></div>
+      <div className="hidden sm:block w-px h-6 bg-slate-300 mx-1 flex-shrink-0"></div>
 
       <button
         type="button"
         onClick={() => editor.chain().focus().outdent().run()}
-        className="p-2 rounded hover:bg-slate-200 transition-colors text-slate-600"
+        className="p-2 rounded hover:bg-slate-200 transition-colors text-slate-600 flex-shrink-0"
         title="減少縮排"
       >
         <IndentDecrease className="w-4 h-4" />
@@ -322,7 +435,7 @@ const MenuBar = ({ editor }: { editor: any }) => {
       <button
         type="button"
         onClick={() => editor.chain().focus().indent().run()}
-        className="p-2 rounded hover:bg-slate-200 transition-colors text-slate-600"
+        className="p-2 rounded hover:bg-slate-200 transition-colors text-slate-600 flex-shrink-0"
         title="增加縮排"
       >
         <IndentIncrease className="w-4 h-4" />
@@ -370,9 +483,9 @@ export function RichEditor({ initialContent, onChange, onTextChange }: RichEdito
   }, [editor, initialContent, contentInitialized, onTextChange]);
 
   return (
-    <div className="border border-slate-300 rounded-xl overflow-hidden bg-white flex flex-col focus-within:ring-2 focus-within:ring-sky-500/20 focus-within:border-sky-500 transition-all h-full">
+    <div className="border border-slate-300 rounded-xl bg-white flex flex-col focus-within:ring-2 focus-within:ring-sky-500/20 focus-within:border-sky-500 transition-all h-full relative">
       <MenuBar editor={editor} />
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto rounded-b-xl">
         <EditorContent editor={editor} className="h-full" />
       </div>
     </div>

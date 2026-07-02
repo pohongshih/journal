@@ -39,7 +39,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50 font-sans text-slate-900 selection:bg-blue-200">
+    <div className="min-h-screen flex flex-col bg-slate-50 font-sans text-slate-900 selection:bg-blue-500/20">
       {/* Global Loading state */}
       <LoadingOverlay isLoading={isLoading} />
 
@@ -50,7 +50,7 @@ export default function App() {
             <div className="bg-blue-600 p-1.5 rounded-lg text-white">
               <BookOpen className="h-5 w-5" />
             </div>
-            <span className="font-bold text-lg tracking-tight text-slate-800">線上週記平台</span>
+            <span className="font-bold text-lg tracking-tight text-slate-800">線上週記管理平台</span>
           </div>
           
           {user && (

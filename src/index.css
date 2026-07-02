@@ -1,2 +1,8 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
+
+/* 防止 Tailwind typography (prose) 覆蓋加粗文字 (strong / b) 的自訂顏色 */
+.prose strong,
+.prose b {
+  color: inherit !important;
+}
