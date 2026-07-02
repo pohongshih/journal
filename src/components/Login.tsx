@@ -39,7 +39,7 @@ export default function Login({ onLogin, setLoading }: LoginProps) {
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-blue-100 text-blue-600 mb-4">
             <BookOpen className="h-8 w-8" />
           </div>
-          <h2 className="text-2xl font-bold text-slate-800">線上週記管理平台</h2>
+          <h2 className="text-2xl font-bold text-slate-800">數位週記平台</h2>
           <p className="text-slate-500 mt-2">士林高商資料處理科</p>
         </div>
         
